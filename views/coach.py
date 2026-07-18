@@ -11,7 +11,7 @@ race = st.session_state.get("active_race")
 activities = st.session_state.activities
 
 st.title("Coach")
-st.caption("Pace reviews the data before waiting for a question.")
+st.caption("Pace has already reviewed the data.")
 
 st.markdown(
     f"""
@@ -24,29 +24,24 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.subheader("Focus next")
-for item in brief["focus"]:
-    st.markdown(f"- {item}")
+with st.container(border=True):
+    st.markdown("### Do next")
+    for item in brief.get("focus", []):
+        st.markdown(f"**→** {item}")
 
-st.subheader("Watch list")
-for item in brief["watch"]:
-    st.markdown(f"- {item}")
+with st.container(border=True):
+    st.markdown("### Keep an eye on")
+    for item in brief.get("watch", []):
+        st.markdown(f"**•** {item}")
 
 if race:
-    with st.container(border=True):
-        st.markdown("**Race context**")
-        st.write(
-            f"{race['name']} · {race['days_remaining']} days remaining · "
-            f"{race['category']} · target {race['target_time']}"
-        )
-else:
-    st.info("Create an active race to enable race-specific coaching.")
+    st.caption(f"Race context: {race['name']} · {race['days_remaining']} days · {race['category']} · target {race['target_time']}")
 
 st.subheader("Ask Coach")
 suggestions = [
     "What should we focus on this weekend?",
     "How are we progressing as a team?",
-    "Is there anything in the data we should be cautious about?",
+    "Is there anything we should be cautious about?",
 ]
 for suggestion in suggestions:
     if st.button(suggestion, use_container_width=True):
@@ -58,14 +53,13 @@ if not question:
 
 if question:
     context = (
-        f"Race: {race}\n"
-        f"Coach brief: {brief}\n"
-        f"Recent activities:\n{activities.sort_values('date', ascending=False).head(20).to_string(index=False)}"
+        f"Race: {race}\nCoach brief: {brief}\nRecent activities:\n"
+        f"{activities.sort_values('date', ascending=False).head(20).to_string(index=False)}"
     )
     with st.chat_message("user"):
         st.write(question)
     with st.chat_message("assistant"):
-        with st.spinner("Reviewing training data..."):
+        with st.spinner("Reviewing your training..."):
             response = answer_question(question, context)
         st.write(response)
 
