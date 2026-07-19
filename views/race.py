@@ -69,4 +69,4 @@ else:
         for item in completed:
             st.write(f"**{item['name']}** · {item['race_date']}")
 
-render_bottom_nav()
+render_bottom_nav("Race")
