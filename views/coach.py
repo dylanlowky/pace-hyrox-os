@@ -1,66 +1,119 @@
+from html import escape
+
 import streamlit as st
+
 from core.config import settings
 from core.ui import render_bottom_nav
-from services.ai_coach import answer_question
+from services.coach import build_coach_cards
+
 
 if not st.session_state.get("household_id") and not settings.demo_mode:
     st.switch_page("views/setup.py")
 
-brief = st.session_state.weekly_brief
-race = st.session_state.get("active_race")
 activities = st.session_state.activities
+athletes = st.session_state.get("athletes", [])
 
-st.title("Coach")
-st.caption("Pace has already reviewed the data.")
+athlete_names = [
+    row.get("display_name", row.get("name", "Athlete"))
+    for row in athletes
+]
+options = ["Team"] + athlete_names
 
-st.markdown(
-    f"""
-    <section class="coach-card">
-      <div class="eyebrow">Current status · {brief['status']}</div>
-      <div class="coach-lead">{brief['headline']}</div>
-      <div class="muted">{brief['summary']}</div>
-    </section>
-    """,
-    unsafe_allow_html=True,
+selected = st.segmented_control(
+    "Coach view",
+    options=options,
+    default=(
+        st.session_state.selected_athlete
+        if st.session_state.get("selected_athlete") in options
+        else "Team"
+    ),
+    label_visibility="collapsed",
+)
+st.session_state.selected_athlete = selected or "Team"
+
+st.markdown("# Coach")
+st.caption(
+    f"Rule-based coaching for {st.session_state.selected_athlete}. "
+    "Only meaningful insights are shown."
 )
 
-with st.container(border=True):
-    st.markdown("### Do next")
-    for item in brief.get("focus", []):
-        st.markdown(f"**→** {item}")
+cards = build_coach_cards(
+    activities=activities,
+    selected_athlete=st.session_state.selected_athlete,
+    athlete_names=athlete_names,
+)
 
-with st.container(border=True):
-    st.markdown("### Keep an eye on")
-    for item in brief.get("watch", []):
-        st.markdown(f"**•** {item}")
+ICON_BY_EYEBROW = {
+    "Weekly progress": "🎯",
+    "Partner coach": "👥",
+    "Training balance": "⚖️",
+    "Training time": "⏱️",
+    "Consistency": "🔥",
+    "Recovery": "❤️",
+    "Body check": "🩺",
+    "Progress trend": "📈",
+    "Progress moment": "🏆",
+}
 
-if race:
-    st.caption(f"Race context: {race['name']} · {race['days_remaining']} days · {race['category']} · target {race['target_time']}")
+HIDE_PHRASES = (
+    "starts after logging",
+    "needs history",
+    "keep building the data",
+    "no pain history yet",
+)
 
-st.subheader("Ask Coach")
-suggestions = [
-    "What should we focus on this weekend?",
-    "How are we progressing as a team?",
-    "Is there anything we should be cautious about?",
-]
-for suggestion in suggestions:
-    if st.button(suggestion, use_container_width=True):
-        st.session_state.pending_question = suggestion
+visible_cards = []
+for index, card in enumerate(cards):
+    combined = f"{card.get('title', '')} {card.get('message', '')}".casefold()
+    if index != 0 and any(phrase in combined for phrase in HIDE_PHRASES):
+        continue
+    visible_cards.append(card)
 
-question = st.chat_input("Ask about your training")
-if not question:
-    question = st.session_state.pop("pending_question", None)
+if not visible_cards:
+    st.info("Log a workout to unlock your first coach insight.")
 
-if question:
-    context = (
-        f"Race: {race}\nCoach brief: {brief}\nRecent activities:\n"
-        f"{activities.sort_values('date', ascending=False).head(20).to_string(index=False)}"
+for card in visible_cards:
+    eyebrow = str(card.get("eyebrow", "PACE Coach"))
+    title = str(card.get("title", "Coach insight"))
+    message = str(card.get("message", ""))
+    status = card.get("status", "info")
+
+    icon = next(
+        (
+            value
+            for key, value in ICON_BY_EYEBROW.items()
+            if eyebrow.casefold().startswith(key.casefold())
+        ),
+        "✦",
     )
-    with st.chat_message("user"):
-        st.write(question)
-    with st.chat_message("assistant"):
-        with st.spinner("Reviewing your training..."):
-            response = answer_question(question, context)
-        st.write(response)
+
+    status_text = {
+        "good": "On track",
+        "watch": "Needs attention",
+        "alert": "Take care",
+        "info": "Coach note",
+    }.get(status, "Coach note")
+
+    st.markdown(
+        f"""
+        <section class="insight-card">
+          <div class="insight-row">
+            <div class="insight-icon">{icon}</div>
+            <div>
+              <div class="eyebrow">{escape(eyebrow)}</div>
+              <div class="insight-title">
+                {escape(title)}
+                <span class="insight-status">{escape(status_text)}</span>
+              </div>
+              <div class="insight-message">{escape(message)}</div>
+            </div>
+          </div>
+        </section>
+        """,
+        unsafe_allow_html=True,
+    )
+
+if st.button("👟  Log workout", type="primary", use_container_width=True):
+    st.switch_page("views/activities.py")
 
 render_bottom_nav("Coach")
