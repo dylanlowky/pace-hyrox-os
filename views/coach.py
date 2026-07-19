@@ -3,7 +3,7 @@ from html import escape
 import streamlit as st
 
 from core.config import settings
-from core.ui import render_bottom_nav
+from core.ui import icon_svg, render_bottom_nav
 from services.coach import build_coach_cards
 
 
@@ -44,15 +44,15 @@ cards = build_coach_cards(
 )
 
 ICON_BY_EYEBROW = {
-    "Weekly progress": "🎯",
-    "Partner coach": "👥",
-    "Training balance": "⚖️",
-    "Training time": "⏱️",
-    "Consistency": "🔥",
-    "Recovery": "❤️",
-    "Body check": "🩺",
-    "Progress trend": "📈",
-    "Progress moment": "🏆",
+    "Weekly progress": "target",
+    "Partner coach": "team",
+    "Training balance": "balance",
+    "Training time": "clock",
+    "Consistency": "trend",
+    "Recovery": "heart",
+    "Body check": "body",
+    "Progress trend": "progress",
+    "Progress moment": "trophy",
 }
 
 HIDE_PHRASES = (
@@ -78,13 +78,13 @@ for card in visible_cards:
     message = str(card.get("message", ""))
     status = card.get("status", "info")
 
-    icon = next(
+    icon_name = next(
         (
             value
             for key, value in ICON_BY_EYEBROW.items()
             if eyebrow.casefold().startswith(key.casefold())
         ),
-        "✦",
+        "coach",
     )
 
     status_text = {
@@ -98,7 +98,7 @@ for card in visible_cards:
         f"""
         <section class="insight-card">
           <div class="insight-row">
-            <div class="insight-icon">{icon}</div>
+            <div class="insight-icon">{icon_svg(icon_name)}</div>
             <div>
               <div class="eyebrow">{escape(eyebrow)}</div>
               <div class="insight-title">
@@ -113,7 +113,7 @@ for card in visible_cards:
         unsafe_allow_html=True,
     )
 
-if st.button("👟  Log workout", type="primary", use_container_width=True):
+if st.button("Log workout", type="primary", use_container_width=True, icon=":material/exercise:"):
     st.switch_page("views/activities.py")
 
 render_bottom_nav("Coach")

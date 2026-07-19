@@ -12,7 +12,7 @@ st.caption("A simple view of consistency, volume and milestones.")
 activities = st.session_state.activities
 if activities.empty:
     st.info("Log activities to begin building progress trends.")
-    render_bottom_nav()
+    render_bottom_nav("Progress")
     st.stop()
 
 data = weekly_volume(activities)
@@ -58,4 +58,4 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-render_bottom_nav()
+render_bottom_nav("Progress")

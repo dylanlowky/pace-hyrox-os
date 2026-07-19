@@ -29,18 +29,13 @@ else:
     user_email = user.email
     current_athlete = repo.get_my_athlete(st.session_state.household_id, str(user.id))
 
-initials = "".join(
-    part[0].upper()
-    for part in current_athlete.get("display_name", "Athlete").split()[:2]
-)
-
 st.markdown(
     f"""
-    <section class="profile-summary">
-      <div class="profile-avatar">{initials or 'A'}</div>
+    <section class="pace-page-intro">
+      <div class="pace-page-icon">👤</div>
       <div>
-        <div class="profile-name">{current_athlete.get('display_name', 'Athlete')}</div>
-        <div class="profile-meta">{user_email}</div>
+        <div class="pace-page-title">{current_athlete.get('display_name', 'Athlete')}</div>
+        <div class="pace-page-subtitle">{user_email}</div>
       </div>
     </section>
     """,

@@ -7,7 +7,7 @@ from core.ui import apply_global_styles, render_brand_header
 
 st.set_page_config(
     page_title="PACE",
-    page_icon="🏃",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
