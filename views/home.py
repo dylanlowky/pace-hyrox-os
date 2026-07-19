@@ -3,7 +3,7 @@ import streamlit as st
 
 from core.config import settings
 from core.ui import metric_html, render_bottom_nav
-from services.metrics import athlete_summary, personal_bests
+from services.metrics import athlete_summary
 
 if not st.session_state.get("household_id") and not settings.demo_mode:
     st.switch_page("views/setup.py")
@@ -14,8 +14,24 @@ brief = st.session_state.weekly_brief
 athletes = st.session_state.get("athletes", [])
 
 name = "Athlete"
+user = st.session_state.get("auth_user")
+
 if athletes:
-    name = athletes[0].get("display_name") or athletes[0].get("name") or name
+    current_athlete = None
+    if user:
+        current_athlete = next(
+            (
+                athlete
+                for athlete in athletes
+                if str(athlete.get("user_id")) == str(user.id)
+            ),
+            None,
+        )
+    if current_athlete is None and settings.demo_mode:
+        current_athlete = athletes[0]
+    if current_athlete:
+        name = current_athlete.get("display_name") or current_athlete.get("name") or name
+
 hour = datetime.now().hour
 greeting = "Good morning" if hour < 12 else "Good afternoon" if hour < 18 else "Good evening"
 
@@ -67,6 +83,7 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
 if st.button("Open full coach brief", use_container_width=True):
     st.switch_page("views/coach.py")
 

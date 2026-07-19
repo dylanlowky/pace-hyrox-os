@@ -1,30 +1,47 @@
 import streamlit as st
+
 from core.config import settings
 from services.supabase_client import get_supabase, reset_supabase_client
+
 
 def _save_session(auth_response) -> None:
     session = getattr(auth_response, "session", None)
     user = getattr(auth_response, "user", None)
+
     if session is None or user is None:
-        raise RuntimeError("No session was returned. Confirm your email if email confirmation is enabled.")
+        raise RuntimeError(
+            "No session was returned. Confirm your email if email confirmation is enabled."
+        )
+
     st.session_state.auth_user = user
     st.session_state.auth_session = session
     st.session_state.access_token = session.access_token
     st.session_state.refresh_token = session.refresh_token
     reset_supabase_client()
 
+
 def sign_in(email: str, password: str) -> None:
     client = get_supabase(authenticated=False)
     response = client.auth.sign_in_with_password({"email": email, "password": password})
     _save_session(response)
 
+
 def sign_up(email: str, password: str) -> str:
     client = get_supabase(authenticated=False)
-    response = client.auth.sign_up({"email": email, "password": password})
+
+    payload = {"email": email, "password": password}
+    app_url = getattr(settings, "app_url", None)
+    if app_url:
+        payload["options"] = {"email_redirect_to": app_url.rstrip("/")}
+
+    response = client.auth.sign_up(payload)
+
     if getattr(response, "session", None):
         _save_session(response)
         return "Account created."
-    return "Account created. Check your email, confirm the address, then sign in."
+
+    return "Account created. Check your email, confirm the address, then return to Pace and sign in."
+
 
 def sign_out() -> None:
     try:
@@ -32,12 +49,22 @@ def sign_out() -> None:
         client.auth.sign_out()
     except Exception:
         pass
+
     for key in [
-        "auth_user", "auth_session", "access_token", "refresh_token",
-        "household_id", "athletes", "activities", "active_race", "remote_loaded"
+        "auth_user",
+        "auth_session",
+        "access_token",
+        "refresh_token",
+        "household_id",
+        "athletes",
+        "activities",
+        "active_race",
+        "remote_loaded",
     ]:
         st.session_state.pop(key, None)
+
     reset_supabase_client()
+
 
 def render_auth_gate() -> None:
     if not settings.supabase_ready:
@@ -57,12 +84,16 @@ def render_auth_gate() -> None:
             email = st.text_input("Email", key="signin_email")
             password = st.text_input("Password", type="password", key="signin_password")
             submit = st.form_submit_button("Sign in", use_container_width=True, type="primary")
+
         if submit:
-            try:
-                sign_in(email.strip(), password)
-                st.rerun()
-            except Exception as exc:
-                st.error(str(exc))
+            if not email.strip() or not password:
+                st.error("Enter your email and password.")
+            else:
+                try:
+                    sign_in(email.strip(), password)
+                    st.rerun()
+                except Exception as exc:
+                    st.error(str(exc))
 
     with create_tab:
         with st.form("signup_form"):
@@ -70,8 +101,11 @@ def render_auth_gate() -> None:
             password = st.text_input("Password", type="password", key="signup_password")
             confirm = st.text_input("Confirm password", type="password")
             submit = st.form_submit_button("Create account", use_container_width=True)
+
         if submit:
-            if len(password) < 8:
+            if not email.strip():
+                st.error("Enter your email.")
+            elif len(password) < 8:
                 st.error("Use at least 8 characters.")
             elif password != confirm:
                 st.error("Passwords do not match.")
